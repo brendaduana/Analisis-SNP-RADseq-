@@ -20,7 +20,8 @@ En mi computadora, agrupar todos los datos crudos (R1 y R2) en una carperta deno
 
 En la terminal local colocar la siguiente instrucción:
 
-`scp -r -P 1967 Desktop/NGS/00.RawData/* massiel.alfonsoglez@132.248.15.41:/home/usuario/curso/00.RawData`
+`scp -r -P 1967 cursopcbr/00.RawData * CMeta05@132.248.15.41:/home/CMeta05/00.RawData`
+
 
 La carpeta 00.RawData debió ser creada previamente en el usuario del servidor
 
