@@ -52,6 +52,11 @@ Entrar a la carpeta _01.FastQC_crudos_ y mover los .html y los .zip
 `mv /home/usuario/curso/00.RawData/*.zip .`
 
 Mover los archivos.html del servidor a la computadora local para poder visualizarlos
+scp: secure copy
+-r: recursive
+-P: portal
+
+en nuestars compus, hacer lo siguiente:
 
 `scp -r -P 1967 usuario@132.248.15.41:/home/usuario/curso/01.FastQC_crudos/*fastqc.html /home/Usuario/Desktop/NGS/01.FastQC_crudos`
 
