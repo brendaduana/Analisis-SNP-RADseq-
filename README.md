@@ -67,12 +67,15 @@ Abrir los .html, visualizar la calidad y definir los parámetros de limpieza.
 En home/usuario, crear la carpeta 02.trimmomatic donde se guardaràn los resultados de la corrida
 
 # Para cada muestra single-end de manera independiente
-`trimmomatic SE muestra.fastq  muestra_trim.fastq   ILLUMINACLIP:TruSeq3-SE.fa:2:30:10`
+`trimmomatic PE muestra.fastq  muestra_trim.fastq   ILLUMINACLIP:TruSeq3-SE.fa:2:30:10`
 
 Colocarse en home/usuario
 # Loop para Trimmomatic con single end (SE)
-`for i in 00.rawdata/*.fastq; do     filename=$(basename "$i");     trimmomatic SE -phred33         "$i"         "02.trimmomatic/trimm_$filename"         HEADCROP:7                SLIDINGWINDOW:5:15         MINLEN:150; done`
+`for i in 00.RawData/rad_curso/*.fastq; do     filename=$(basename "$i");     trimmomatic SE -phred33         "$i"         "02.trimmomatic/trimm_$filename"         HEADCROP:15                SLIDINGWINDOW:10:15         MINLEN:120; done`
 
+SLIDINGWINDOW:10:15
+el 10 es el tamaño de bases
+el 15 es el score de calidad para cada window
 
 # Para cada muestra pair-end de manera independiente
 `java -jar /opt/Trimmomatic-0.39/trimmomatic-0.39.jar PE -threads 10 -phred33 -trimlog BK01triminfo.txt BK01_S95_L001_R1_001.fastq.gz BK01_S95_L001_R2_001.fastq.gz BK01_R1_trimm.fastq.gz BK01_R1_unpair.fastq BK01_R2_trimm.fastq.gz BK01_R2_unpair.fastq ILLUMINACLIP:/opt/Trimmomatic-0.39/adapters/TruSeq2-PE.fa:2:8:10:8:True HEADCROP:14 SLIDINGWINDOW:5:15 MINLEN:110`
@@ -119,13 +122,16 @@ Una vez obtenidos los .fastq con la calidad deseada, copiarlos  del servidor a l
 `scp -r -P 1967 usuario@132.248.15.41:/home/usuario/curso/02.Trimmomatic/*trim.fastq.gz /home/Usuario/Desktop/NGS/02.Trimmomatic`
 
 ### 6. SNPs _calling_ en ipyrad
+Utilizado para analisis filogenómicos
+
 Crear la carpeta _04.ipyrad_ en /home/usuario/
+
 Entrar a la carpeta y activar el ambiente conda para correr el programa.
 
 `conda activate ipyrad`
 
 Crear el archivo de parámetros que emplea ipyrad. Colocar un nombre informativo que permita identificar la corrida. En este ejemplo U90M90
-
+el U90
 `ipyrad -n U90M90`
 
  Como resultado se obtendrá el archivo params-U90M90.txt. Este debe ser editado con el comando _nano_. Los parámetros deben ser modificados según el criterio del investigador. Se requieren varias corridas para definir el set de parámetros que optimiza el ensamblaje, permitiendo obtener el mayor número de SNPs de alta calidad, con bajo porcentaje de datos faltantes.
@@ -139,13 +145,21 @@ Crear el archivo de parámetros que emplea ipyrad. Colocar un nombre informativo
 - [7] [datatype]: Datatype (see docs): rad, gbs, ddrad, etc. _pair3rad_
 - [8] [restriction_overhang] _colocar el sitio de corte de mis enzimas: AATTC, CTAGC, CTAGA (para EcoR1, Xba y NheI)_
 - [14] [clust_threshold]: Clustering threshold for de novo assembly. _Colocar el umbral de similitud para la creación de clusters (en este ejemplo 0.90)_
+## umbral de similitud dentro de cada muestra para ser considerado un locus.
 - [21] [min_samples_locus]: Min # samples per locus for output. _Depende del tamaño de muestra y cuanto missing data acaptaré (ej. si tengo 60 muestras y solo aceptaré el 90% de missing data, en esta casilla debo colocar 54)_
+## SNP aunque tenga pocos tamaños de muestra pueden ser informativos, considerar el tamaño de población.
+## romper dimeros de adaptadores con trirad
+
 - [22] [max_SNPs_locus]: Número máximo de SNPs por locus. _0.1 = 10%_
+## permitir maximo que haya 10 de sitios variables dentro de un locus
+
 - [27] [output_formats]: Output formats (see docs). Colocar * para que genere todos los formatos posibles.
+## generar formatos de salida posibles para el analisis posterior de los datos
 
 Una vez fijados los parámetros de la corrida modificando el params-U90M90, ya se puede correr ipyrad
 
 `nohup ipyrad -p params-U90M90.txt -s 1234567 -c 24 -f --MPI > output.txt &` 
+nohup= creará un archivo donde indicará el proceso
 
 Dependiendo de la catidad de datos, la corrida puede ser lenta. Recomiendo utilizar _nohup_ para ir monitoreándola. 
 
@@ -161,9 +175,10 @@ Las opciones de filtrado en VCFtools pueden ser visualizadas con el comando `man
 
 **set de datos 1, análsis de selección**
 
-Objetivo: eliminar alelos con frecuencia menor al 4%, retener _loci_ bialelélicos con profundidad mayor a 10 y máximo 10% de _missing data_.
-
+Objetivo: eliminar alelos con frecuencia menor al 4%, retener _loci_ bialelélicos con profundidad mayor a 10 y máximo 10% de _missing data_ --> SELECCION
+ programa tipo_de_archivo como_se_llama freq_min_de_alelos profudidad_10_individuos
 `vcftools --vcf U90M90.vcf --maf 0.04 --min-meanDP 10 --min-alleles 2 --max-alleles 2 --max-missing 0.9 --recode --out U90M90_maf0.04_DP10_MD0.9`
+
 
 
 **set de datos 2, análisis de estructura y diversidad**
@@ -172,6 +187,7 @@ Objetivo: A la salida anterior, aplicarle el filtro de desequilibrio de ligamien
 
 `vcftools --vcf U90M90_maf0.04_DP10_MD0.9.vcf --thin 1000 --recode --out U90M90_maf0.04_DP10_DL.vcf`
 
+## FILTRO DE LIGAMIENTO ESTRUCTURAL
  
 Para ambos sets de datos, visualizar el archivo.log para ver cuantos sitios se mantienen luego del filtrado.
 
@@ -181,3 +197,10 @@ _En este punto, ya están listos los sets de datos a emplear en análisis de est
 En la terminal de mi compu
 `scp -r -P 1967 massiel.alfonsoglez@132.248.15.41:/home/massiel.alfonsoglez/curso/04.ipyrad/U90M90_outfiles/U90M90_maf0.04_DP10_MD0.9.vcf /home/alex-dll/Escritorio`
  
+# Comenzamos a trabajar en Rstudio con el documento lobo y el ejercicio_1
+matris de VCF, para analisis genómicos poblacionales.
+maching learning, aprendizaje no supervisado para realizar el PCA
+
+Analisis de agrupamiento con soporte
+calculos de FST, indices de heterogosidad
+RDA: analisis de interacción organismo ambiente, loci para selección
